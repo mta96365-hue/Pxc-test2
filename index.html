@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phoenix Tutor</title>
     <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+
     <style>
         /* EINHELL / TECH FARBSCHEMA */
         :root { 
@@ -170,8 +178,48 @@
             color: #ffffff;
         }
         
-        #result-box { width: 90%; background: #0d0d0d; padding: 20px; border-radius: 6px; margin-top: 20px; min-height: 90px; border: 1px solid var(--border-color); border-left: 4px solid var(--primary); box-sizing: border-box; font-size: 0.95rem; line-height: 1.5; font-family: monospace; color: #00ff00; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); word-break: break-word; }
-        
+        /* INTERAKTIVE RESPONSIVE OUTPUT BOX (MARKDOWN & BILD-SUPPORT) */
+        #result-box { 
+            width: 90%; 
+            background: #0d0d0d; 
+            padding: 20px; 
+            border-radius: 6px; 
+            margin-top: 20px; 
+            min-height: 90px; 
+            border: 1px solid var(--border-color); 
+            border-left: 4px solid var(--primary); 
+            box-sizing: border-box; 
+            font-size: 0.95rem; 
+            line-height: 1.6; 
+            color: #f0f0f0; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8); 
+            word-break: break-word; 
+        }
+
+        /* Styling für ausgegebene Markdown-Bilder */
+        #result-box img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin: 12px 0;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Styling für ausgegebene Code-Blöcke */
+        #result-box pre {
+            background: #151515 !important;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            margin: 12px 0;
+        }
+        #result-box code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+        }
+
         /* SETTINGS DESIGN */
         .settings-container {
             width: 90%;
@@ -340,14 +388,14 @@
         </div>
 
         <div id="result-box">SYSTEM BEREIT...</div>
-        <button id="back-to-sim-btn" class="btn-full btn-back" style="margin-top: 20px;">• Zurück</button>
+        <button id="back-to-sim-btn" class="btn-full btn-back" style="margin-top: 20px;">← Zurück</button>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-        // --- KEY LOGIK ---
+        // --- KEY CONFIGURATION ---
         const keyInput = document.getElementById('api-key-input');
         
         if (localStorage.getItem('phoenix_api_key')) {
@@ -392,7 +440,7 @@
                 btn_back: "← Zurück",
                 btn_schematic: "📊 Schaltplan einblenden",
                 btn_close: "✖ Schließen",
-                placeholder: "Prompt eingeben...",
+                placeholder: "Z.B. 'Wie sieht eine LED aus?' oder 'Schreibe Blink-Code'...",
                 voice_label: "STIMME:",
                 speed_label: "TEMPO:",
                 sys_ready: "SYSTEM BEREIT...",
@@ -419,7 +467,7 @@
                 btn_back: "← Return",
                 btn_schematic: "📊 Show Schematic",
                 btn_close: "✖ Close",
-                placeholder: "Enter prompt...",
+                placeholder: "E.g. 'How does an LED look like?' or 'Write blinking code'...",
                 voice_label: "VOICE:",
                 speed_label: "SPEED:",
                 sys_ready: "SYSTEM READY...",
@@ -538,6 +586,7 @@
             } catch (err) { resultBox.innerHTML = i18n[currentLang].err_cam; }
         }
 
+        // --- INTELLIGENTE MULTIMODALE ANFRAGE (Bilder + Code) ---
         async function runTutor(q) {
             const currentApiKey = localStorage.getItem('phoenix_api_key');
             if (!currentApiKey || currentApiKey.trim() === "") {
@@ -554,24 +603,32 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             const base64Img = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 
-            // --- NEUER, HYBRIDER SYSTEM PROMPT FÜR INTELLIGENTES ANTWORTVERHALTEN ---
+            // SYSTEM PROMPT DER GEMINI ANWEIST, BEI BEDARF BILDER VON UNSPLASH EINZUBAUEN
             let systemPrompt = "";
             if (currentLang === 'de') {
-                systemPrompt = `Du bist der "Phoenix Tutor", ein hilfreicher KI-Lehrer für Arduino-Elektronik. 
-                Beantworte die Frage des Schülers: "${q}".
+                systemPrompt = `Du bist der "Phoenix Tutor", ein hilfreicher KI-Assistent für Arduino-Schüler.
+                Beantworte die Schülerfrage: "${q}" basierend auf dem Kamerabild (falls nötig).
                 
-                WICHTIGE VERHALTENSREGELN:
-                1. Wenn die Frage allgemein/theoretisch ist (z.B. "Was ist eine LED?", "Wo ist Plus/Minus?", "Wie bringe ich sie zum Blinken?"), beantworte sie sofort klar, freundlich und verständlich. Verlange in diesem Fall KEIN Bild!
-                2. Wenn die Frage sich auf einen Fehler in der realen Schaltung bezieht (z.B. "Warum leuchtet meine LED nicht?" oder "Ist das so richtig?"), nutze das mitgesendete Bild für eine genaue Fehleranalyse. Erkläre dem Schüler sachlich, was er auf seinem Steckbrett anpassen muss.
-                3. Antworte immer kurz, präzise (maximal 3-4 Sätze) und schülerfreundlich auf Deutsch.`;
+                WICHTIGE INSTRUKTIONEN:
+                1. Wenn der Schüler nach dem Aussehen von Elektronikbauteilen fragt (z.B. LED, Widerstand, Breadboard, Arduino), MUSS du ein passendes Bild im Markdown-Format einbinden. Nutze dafür freie Unsplash-Bilder nach dem Muster:
+                   ![Bauteil-Name](https://images.unsplash.com/photo-[ID]?auto=format&fit=crop&w=600&q=80) oder suche ein passendes Bild. Versuche z.B. für eine LED: https://images.unsplash.com/photo-1550152916-2580549c4d2d
+                2. Wenn der Schüler nach Code fragt, gebe sauberen Arduino C++ Code in einem standardisierten Code-Block aus:
+                   \`\`\`cpp
+                   // Code hier
+                   \`\`\`
+                3. Antworte immer auf Deutsch, halte dich einfach und schülerfreundlich.`;
             } else {
-                systemPrompt = `You are the "Phoenix Tutor", a helpful AI teacher for Arduino electronics. 
-                Answer the student's question: "${q}".
+                systemPrompt = `You are the "Phoenix Tutor", a helpful AI assistant for Arduino students.
+                Answer the student's question: "${q}" based on the camera image (if necessary).
                 
-                IMPORTANT RULES:
-                1. If the question is general or theoretical (e.g., "What is an LED?", "Where is positive/negative?", "How do I make it blink?"), answer it immediately in a clear, friendly, and easy-to-understand way. Do NOT ask for an image in this case!
-                2. If the question refers to a physical error on their breadboard (e.g., "Why is my LED not lighting up?" or "Is this correct?"), analyze the attached image carefully to find the mistake and explain how to fix it.
-                3. Keep your response brief, precise (maximum 3-4 sentences), and student-friendly in English.`;
+                IMPORTANT INSTRUCTIONS:
+                1. If the student asks how components look like (e.g., LED, Resistor, Breadboard, Arduino), you MUST include a fitting image in Markdown format. Use Unsplash images:
+                   ![Component](https://images.unsplash.com/photo-[ID]?auto=format&fit=crop&w=600&q=80). E.g. for an LED use: https://images.unsplash.com/photo-1550152916-2580549c4d2d
+                2. If the student asks for code, provide clean Arduino C++ code inside a standard markdown code block:
+                   \`\`\`cpp
+                   // Code here
+                   \`\`\`
+                3. Always answer in English, keep it simple and easy to understand for students.`;
             }
 
             try {
@@ -581,11 +638,19 @@
                 let res = await activeModel.generateContent([systemPrompt, { inlineData: { data: base64Img, mimeType: "image/jpeg" } }]);
                 let text = await res.response.text();
                 
-                resultBox.innerHTML = `<span style="color:#9e9e9e">>_ OUTPUT:</span><br>${text}`;
-                speak(text);
+                // Markdown in HTML parsen (Bilder & Code-Blöcke rendern!)
+                resultBox.innerHTML = marked.parse(text);
+                
+                // Prism.js anweisen, das Code-Highlighting auf den neuen Code anzuwenden
+                Prism.highlightAllUnder(resultBox);
+
+                // Sprachausgabe (Liest nur den Text vor, ignoriert Bilder/Code)
+                const textToSpeak = text.replace(/!\[.*?\]\(.*?\)/g, "").replace(/```[\s\S]*?```/g, "");
+                speak(textToSpeak);
             } catch (e) { resultBox.innerHTML = "KI Fehler / AI Error: " + e.message; }
         }
 
+        // --- SPRACH-AUSGABE ---
         function speak(text) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
@@ -609,6 +674,7 @@
         sendBtn.onclick = () => runTutor(textInput.value);
         textInput.onkeypress = (e) => { if(e.key === 'Enter') runTutor(textInput.value); };
 
+        // --- MIKROFON ---
         const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognitionObj = null;
 

@@ -287,13 +287,13 @@
         <div class="intro-card" style="width: 95%; margin-bottom: 15px;">
             <h2 id="ui-s2-title">Schritt 2: Virtual Block-Test</h2>
             
-            <p id="wokwi-fallback-text" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; margin-bottom: 10px; text-align: center;">
-                💡 Falls der Simulator unten blockiert wird: 
-                <a href="https://wokwi.com/projects/new/arduino-uno" target="_blank" id="wokwi-fallback-link" style="color: var(--primary); text-decoration: underline; font-weight: bold;">Simulator in neuem Tab öffnen ↗</a>
+            <p id="tinkercad-info-text" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; margin-bottom: 12px; text-align: center; line-height: 1.4;">
+                🏫 <strong>Unterrichts-Tipp:</strong> Melde dich mit deinem Klassen-Code an oder öffne Tinkercad im Vollbild:<br>
+                <a href="https://www.tinkercad.com/joinclass" target="_blank" id="tinkercad-class-link" style="color: var(--primary); text-decoration: underline; font-weight: bold; margin-top: 5px; display: inline-block;">Klassenraum beitreten ↗</a>
             </p>
 
             <div class="iframe-container">
-                <iframe src="https://wokwi.com/projects/new/arduino-uno?embed=1" allow="fullscreen"></iframe>
+                <iframe src="https://www.tinkercad.com/embed/0qzHAwev1Hb?editbtn=1" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>
             </div>
         </div>
         <button id="to-camera-btn" class="btn-full btn-next">Hardware-Check starten ➤</button>
@@ -347,15 +347,13 @@
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-        // --- KEY LOGIK: Holt den Key sicher aus dem lokalen Speicher des Schülers ---
+        // --- KEY LOGIK ---
         const keyInput = document.getElementById('api-key-input');
         
-        // Beim Laden nachschauen, ob bereits ein Key gespeichert ist
         if (localStorage.getItem('phoenix_api_key')) {
             keyInput.value = localStorage.getItem('phoenix_api_key');
         }
 
-        // Key sofort lokal sichern, wenn der Schüler ihn eintippt
         keyInput.oninput = () => {
             localStorage.setItem('phoenix_api_key', keyInput.value);
         };
@@ -375,7 +373,7 @@
         let currentLang = 'de';
         let allVoices = [];
 
-        // --- WÖRTERBUCH FÜR DIE KOMPLETTE ÜBERSETZUNG ---
+        // --- INTERNATIONALE ÜBERSETZUNGEN ---
         const i18n = {
             de: {
                 subtitle: "SYS.MODULE // VERSUCH 1: BLINK",
@@ -387,9 +385,9 @@
                 s1_l1: "MCU: Arduino Uno & USB-Kabel",
                 s1_l2: "Base: Breadboard & Jumper-Kabel",
                 s1_l3: "Parts: LED (rot) & 220Ω Widerstand",
-                btn_sim: "Blockly-Test starten ➤",
+                btn_sim: "Tinkercad starten ➤",
                 s2_title: "Schritt 2: Virtual Block-Test",
-                fallback_text: "💡 Falls der Simulator unten blockiert wird: <a href='https://wokwi.com/projects/new/arduino-uno' target='_blank' style='color: var(--primary); text-decoration: underline; font-weight: bold;'>Simulator in neuem Tab öffnen ↗</a>",
+                tinkercad_info: "🏫 <strong>Unterrichts-Tipp:</strong> Melde dich mit deinem Klassen-Code an oder öffne Tinkercad im Vollbild:<br><a href='https://www.tinkercad.com/joinclass' target='_blank' style='color: var(--primary); text-decoration: underline; font-weight: bold; margin-top: 5px; display: inline-block;'>Klassenraum beitreten ↗</a>",
                 btn_cam: "Hardware-Check starten ➤",
                 btn_back: "← Zurück",
                 btn_schematic: "📊 Schaltplan einblenden",
@@ -414,9 +412,9 @@
                 s1_l1: "MCU: Arduino Uno & USB Cable",
                 s1_l2: "Base: Breadboard & Jumper Wires",
                 s1_l3: "Parts: LED (red) & 220Ω Resistor",
-                btn_sim: "Start Blockly Test ➤",
+                btn_sim: "Start Tinkercad ➤",
                 s2_title: "Step 2: Virtual Block-Test",
-                fallback_text: "💡 If the simulator below is blocked: <a href='https://wokwi.com/projects/new/arduino-uno' target='_blank' style='color: var(--primary); text-decoration: underline; font-weight: bold;'>Open simulator in new tab ↗</a>",
+                tinkercad_info: "🏫 <strong>Classroom Tip:</strong> Sign in with your class code or open Tinkercad in full screen:<br><a href='https://www.tinkercad.com/joinclass' target='_blank' style='color: var(--primary); text-decoration: underline; font-weight: bold; margin-top: 5px; display: inline-block;'>Join Class ↗</a>",
                 btn_cam: "Hardware Check Init ➤",
                 btn_back: "← Return",
                 btn_schematic: "📊 Show Schematic",
@@ -433,7 +431,7 @@
             }
         };
 
-        // --- TEMPO SLIDER LOGIK ---
+        // --- SPEED SLIDER ---
         speedSlider.oninput = function() {
             speedValue.innerText = this.value + "x";
         }
@@ -479,7 +477,6 @@
             
             document.getElementById('lang-toggle').innerText = currentLang === 'de' ? 'EN' : 'DE';
             
-            // Texte austauschen
             document.getElementById('ui-subtitle').innerText = t.subtitle;
             document.getElementById('key-card-title').innerText = t.key_title;
             document.getElementById('key-card-desc').innerText = t.key_desc;
@@ -491,7 +488,7 @@
             document.getElementById('ui-s1-l3').innerText = t.s1_l3;
             document.getElementById('to-sim-btn').innerText = t.btn_sim;
             document.getElementById('ui-s2-title').innerText = t.s2_title;
-            document.getElementById('wokwi-fallback-text').innerHTML = t.fallback_text;
+            document.getElementById('tinkercad-info-text').innerHTML = t.tinkercad_info;
             document.getElementById('to-camera-btn').innerText = t.btn_cam;
             document.getElementById('back-to-intro-btn').innerText = t.btn_back;
             document.getElementById('back-to-sim-btn').innerText = t.btn_back;
@@ -501,7 +498,6 @@
             document.getElementById('voice-label').innerText = t.voice_label;
             document.getElementById('speed-label').innerText = t.speed_label;
             
-            // AUTOMATISCHE TEMPO-UMSTELLUNG
             const targetSpeed = currentLang === 'de' ? "1.20" : "1.00";
             speedSlider.value = targetSpeed;
             speedValue.innerText = targetSpeed + "x";
@@ -543,7 +539,6 @@
         }
 
         async function runTutor(q) {
-            // SICHERHEITSCHECK: Gibt es einen eingetragenen Key?
             const currentApiKey = localStorage.getItem('phoenix_api_key');
             if (!currentApiKey || currentApiKey.trim() === "") {
                 resultBox.innerHTML = `<span style="color:var(--primary); font-weight:bold;">⚠️ ${i18n[currentLang].err_no_key}</span>`;
@@ -559,7 +554,6 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             const base64Img = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 
-            // DYNAMISCHER SYSTEM PROMPT
             let systemPrompt = "";
             if (currentLang === 'de') {
                 systemPrompt = `Du bist der "Phoenix Tutor". Beantworte die Frage: "${q}" basierend auf dem Bild. 
@@ -570,7 +564,6 @@
             }
 
             try {
-                // Dynamisch die Google Generative AI mit dem individuellen Key des Schülers initialisieren
                 const activeGenAI = new GoogleGenerativeAI(currentApiKey);
                 const activeModel = activeGenAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -582,7 +575,6 @@
             } catch (e) { resultBox.innerHTML = "KI Fehler / AI Error: " + e.message; }
         }
 
-        // --- SPRACH-AUSGABE ---
         function speak(text) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
@@ -606,7 +598,6 @@
         sendBtn.onclick = () => runTutor(textInput.value);
         textInput.onkeypress = (e) => { if(e.key === 'Enter') runTutor(textInput.value); };
 
-        // --- MIKROFON ---
         const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognitionObj = null;
 

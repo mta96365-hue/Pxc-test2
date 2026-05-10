@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phoenix Tutor</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        /* EINHELL / TECH FARBSCHEMA */
+        :root { 
+            --bg: #0d0d0d;              
+            --card-bg: #1a1a1a;         
+            --input-bg: #262626;        
+            --text: #f0f0f0;            
+            --text-muted: #9e9e9e;      
+            
+            --primary: #e3000f;         
+            --primary-hover: #ff1a2b;   
+            --primary-glow: rgba(227, 0, 15, 0.4); 
+            
+            --secondary: #333333;       
+            --secondary-hover: #4d4d4d;
+            
+            --border-color: #333333;
+        }
+
+        body { 
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+            background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        header { 
+            position: relative;
+            padding: 25px 15px 15px 15px; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border-bottom: 2px solid var(--border-color);
+            background-color: rgba(13, 13, 13, 0.9);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .lang-toggle:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(227, 0, 15, 0.1);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+        
+        .app-logo { 
+            max-width: 120px; 
+            height: auto; 
+            margin-bottom: 10px; 
+            filter: drop-shadow(0 0 10px var(--primary-glow)); 
+        }
+        
+        h1 { 
+            margin: 0 0 5px 0; 
+            font-size: 1.8rem; 
+            font-weight: 900; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffffff;
+        }
+        
+        .screen { 
+            width: 100%; 
+            max-width: 600px; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            padding-bottom: 40px; 
+        }
+        
+        .screen.active { display: flex; animation: fadeInSlide 0.4s ease-out; }
+        @keyframes fadeInSlide { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .intro-card { 
+            background: var(--card-bg); width: 90%; border-radius: 8px; padding: 25px; box-sizing: border-box; margin-bottom: 25px; border: 1px solid var(--border-color); border-left: 4px solid var(--primary); box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+
+        .intro-card h2 { margin-top: 0; color: #ffffff; font-weight: 800; text-transform: uppercase; font-size: 1.3rem; letter-spacing: 1px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        
+        .iframe-container { width: 100%; background: #000000; border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid var(--border-color); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        iframe { width: 100%; height: 500px; border: none; display: block; }
+
+        #video-container { position: relative; width: 90%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background-color: #000; box-shadow: 0 0 20px rgba(227, 0, 15, 0.2); border: 2px solid var(--primary); }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .guide { position: absolute; top: 15%; left: 15%; width: 70%; height: 70%; border: 2px dashed rgba(227, 0, 15, 0.6); pointer-events: none; }
+        
+        /* SCHALTPLAN OVERLAY */
+        #schematic-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #schematic-overlay.active { display: flex; animation: fadeInSlide 0.3s ease-out; }
+        #schematic-img-container {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .input-group { width: 90%; display: flex; gap: 10px; margin-top: 20px; padding: 0; box-sizing: border-box; }
+        #text-input { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text); padding: 15px; font-size: 1rem; outline: none; transition: all 0.3s ease; font-family: monospace; }
+        #text-input:focus { border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+        
+        .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.3rem; transition: all 0.2s ease; color: var(--text); }
+        .icon-btn:hover { border-color: var(--primary); background: var(--input-bg); color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+        #send-btn { color: var(--primary); border-color: var(--primary); background: rgba(227,0,15,0.1); }
+        #send-btn:hover { background: var(--primary); color: #fff; }
+
+        .btn-full { width: 90%; padding: 18px; border-radius: 6px; border: none; font-weight: 800; cursor: pointer; font-size: 1.1rem; margin-bottom: 15px; transition: all 0.2s ease; text-align: center; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-next { background: var(--primary); color: #ffffff; box-shadow: 0 4px 15px var(--primary-glow); }
+        .btn-next:hover { background: var(--primary-hover); box-shadow: 0 6px 20px rgba(227, 0, 15, 0.6); transform: translateY(-2px); }
+        .btn-back { background: var(--secondary); color: var(--text); font-size: 0.9rem; padding: 14px; border: 1px solid #444; }
+        .btn-back:hover { background: var(--secondary-hover); border-color: #666; }
+        
+        .btn-outline { 
+            background: rgba(227, 0, 15, 0.05); 
+            color: var(--primary); 
+            border: 1px solid var(--primary); 
+            font-size: 0.95rem; 
+            padding: 12px;
+        }
+        .btn-outline:hover { 
+            background: rgba(227, 0, 15, 0.15); 
+            box-shadow: 0 0 15px var(--primary-glow); 
+            color: #ffffff;
+        }
+        
+        #result-box { width: 90%; background: #0d0d0d; padding: 20px; border-radius: 6px; margin-top: 20px; min-height: 90px; border: 1px solid var(--border-color); border-left: 4px solid var(--primary); box-sizing: border-box; font-size: 0.95rem; line-height: 1.5; font-family: monospace; color: #00ff00; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); word-break: break-word; }
+        
+        /* SETTINGS DESIGN */
+        .settings-container {
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            background: var(--input-bg);
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .settings-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: bold;
+            font-family: monospace;
+            white-space: nowrap;
+            width: 60px;
+        }
+        #voice-select {
+            flex: 1;
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            padding: 5px;
+            width: 100%;
+        }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            flex: 1;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 5px var(--primary-glow);
+        }
+        #speed-value {
+            color: var(--primary);
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            width: 45px;
+            text-align: right;
+        }
+
+        .loading { color: var(--primary); font-style: normal; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button id="lang-toggle" class="lang-toggle">EN</button>
+        <img src="logo.png" alt="Logo" class="app-logo" onerror="this.src='https://placehold.co/150x150/1a1a1a/e3000f?text=P.H.O.E.N.I.X'">
+        <h1>Phoenix Tutor</h1>
+        <div id="ui-subtitle" style="color: var(--primary); font-size: 0.95rem; font-weight: 700; letter-spacing: 1px; font-family: monospace;">SYS.MODULE // VERSUCH 1: BLINK</div>
+    </header>
+
+    <div id="intro-screen" class="screen active">
+        <div class="intro-card" style="border-left-color: #00ff00;">
+            <h2 id="key-card-title">🔑 API-Key Konfiguration</h2>
+            <p id="key-card-desc" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">Damit diese App mit der Google-KI sprechen kann, benötigst du einen kostenlosen Gemini API-Key:</p>
+            <input type="password" id="api-key-input" placeholder="Google Gemini API-Key einfügen..." style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; color: #00ff00; font-family: monospace; font-size: 0.95rem; box-sizing: border-box; outline: none; margin-bottom: 10px;">
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">
+                💡 <span id="key-safe-note">Dein Schlüssel wird sicher und lokal im Browser gespeichert und niemals ins Internet übertragen.</span> 
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: bold;">Hol dir hier einen kostenlosen Key</a>
+            </p>
+        </div>
+
+        <div class="intro-card">
+            <h2 id="ui-s1-title">Schritt 1: Hardware Specs</h2>
+            <p id="ui-s1-desc" style="color: var(--text-muted);">Erforderliche Komponenten bereitstellen:</p>
+            <ul>
+                <li id="ui-s1-l1">MCU: Arduino Uno & USB-Kabel</li>
+                <li id="ui-s1-l2">Base: Breadboard & Jumper-Kabel</li>
+                <li id="ui-s1-l3">Parts: LED (rot) & 220Ω Widerstand</li>
+            </ul>
+        </div>
+        <button id="to-sim-btn" class="btn-full btn-next">Simulator starten ➤</button>
+    </div>
+
+    <div id="simulator-screen" class="screen">
+        <div class="intro-card" style="width: 95%;">
+            <h2 id="ui-s2-title">Schritt 2: Virtual Block-Test</h2>
+            <div class="iframe-container">
+                <iframe src="https://wokwi.com/projects/322474950346375762?embedded=1" allow="fullscreen"></iframe>
+            </div>
+        </div>
+        <button id="to-camera-btn" class="btn-full btn-next">Hardware-Check starten ➤</button>
+        <button id="back-to-intro-btn" class="btn-full btn-back">← Zurück</button>
+    </div>
+
+    <div id="tutor-screen" class="screen">
+        <div id="video-container">
+            <video id="webcam" autoplay playsinline></video>
+            <div class="guide"></div>
+            
+            <div id="schematic-overlay">
+                <div id="schematic-img-container">
+                    <img src="mein-eigener-schaltplan.jpg" alt="Schaltplan" style="width: 100%; border-radius: 4px; display: block;" onerror="this.src='https://placehold.co/400x300/1a1a1a/e3000f?text=DEIN+BILD+HIER+EINFUEGEN'">
+                </div>
+                <button id="close-schematic" class="btn-full btn-back" style="margin-top:15px; width: 100%; max-width: 400px;">✖ Schließen</button>
+            </div>
+        </div>
+
+        <div style="width: 90%; margin-top: 15px;">
+            <button id="show-schematic-btn" class="btn-full btn-outline" style="width: 100%; margin-bottom: 5px;">📊 Schaltplan einblenden</button>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="text-input" placeholder="Prompt eingeben..." autocomplete="off">
+            <button id="send-btn" class="icon-btn">➤</button>
+            <button id="voice-btn" class="icon-btn">🎤</button>
+        </div>
+
+        <div class="voice-selector-container">
+            <div class="settings-container">
+                <div class="settings-row">
+                    <span id="voice-label" class="settings-label">STIMME:</span>
+                    <select id="voice-select">
+                        <option value="default">System Default</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <span id="speed-label" class="settings-label">TEMPO:</span>
+                    <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.05" value="1.20">
+                    <span id="speed-value">1.20x</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="result-box">SYSTEM BEREIT...</div>
+        <button id="back-to-sim-btn" class="btn-full btn-back" style="margin-top: 20px;">← Zurück</button>
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        // --- KEY LOGIK: Holt den Key sicher aus dem lokalen Speicher des Schülers ---
+        const keyInput = document.getElementById('api-key-input');
+        
+        // Beim Laden nachschauen, ob bereits ein Key gespeichert ist
+        if (localStorage.getItem('phoenix_api_key')) {
+            keyInput.value = localStorage.getItem('phoenix_api_key');
+        }
+
+        // Key sofort lokal sichern, wenn der Schüler ihn eintippt
+        keyInput.oninput = () => {
+            localStorage.setItem('phoenix_api_key', keyInput.value);
+        };
+
+        const video = document.getElementById('webcam');
+        const resultBox = document.getElementById('result-box');
+        const textInput = document.getElementById('text-input');
+        const sendBtn = document.getElementById('send-btn');
+        const voiceBtn = document.getElementById('voice-btn');
+        const canvas = document.getElementById('canvas');
+        const schematicOverlay = document.getElementById('schematic-overlay');
+        const voiceSelect = document.getElementById('voice-select');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        
+        let currentStream = null;
+        let currentLang = 'de';
+        let allVoices = [];
+
+        // --- WÖRTERBUCH FÜR DIE KOMPLETTE ÜBERSETZUNG ---
+        const i18n = {
+            de: {
+                subtitle: "SYS.MODULE // VERSUCH 1: BLINK",
+                key_title: "🔑 API-Key Konfiguration",
+                key_desc: "Damit diese App mit der Google-KI sprechen kann, benötigst du einen kostenlosen Gemini API-Key:",
+                key_safe: "Dein Schlüssel wird sicher und lokal im Browser gespeichert und niemals ins Internet übertragen.",
+                s1_title: "Schritt 1: Hardware Specs",
+                s1_desc: "Erforderliche Komponenten bereitstellen:",
+                s1_l1: "MCU: Arduino Uno & USB-Kabel",
+                s1_l2: "Base: Breadboard & Jumper-Kabel",
+                s1_l3: "Parts: LED (rot) & 220Ω Widerstand",
+                btn_sim: "Blockly-Test starten ➤",
+                s2_title: "Schritt 2: Virtual Block-Test",
+                btn_cam: "Hardware-Check starten ➤",
+                btn_back: "← Zurück",
+                btn_schematic: "📊 Schaltplan einblenden",
+                btn_close: "✖ Schließen",
+                placeholder: "Prompt eingeben...",
+                voice_label: "STIMME:",
+                speed_label: "TEMPO:",
+                sys_ready: "SYSTEM BEREIT...",
+                processing: "<span class='loading'>PROCESSING...</span>",
+                mic_listening: "<span class='loading'>🎤 HÖRE ZU...</span>",
+                err_cam: "Fehler: Kamera-Zugriff verweigert.",
+                err_mic: "Spracheingabe wird nicht unterstützt.",
+                err_no_key: "Bitte trage zuerst deinen API-Key auf dem Startbildschirm ein!"
+            },
+            en: {
+                subtitle: "SYS.MODULE // EXP 1: BLINK",
+                key_title: "🔑 API Key Configuration",
+                key_desc: "To allow this app to talk to the Google AI, you need a free Gemini API key:",
+                key_safe: "Your key is stored safely and locally inside your browser and is never uploaded online.",
+                s1_title: "Step 1: Hardware Specs",
+                s1_desc: "Prepare the following components:",
+                s1_l1: "MCU: Arduino Uno & USB Cable",
+                s1_l2: "Base: Breadboard & Jumper Wires",
+                s1_l3: "Parts: LED (red) & 220Ω Resistor",
+                btn_sim: "Start Blockly Test ➤",
+                s2_title: "Step 2: Virtual Block-Test",
+                btn_cam: "Hardware Check Init ➤",
+                btn_back: "← Return",
+                btn_schematic: "📊 Show Schematic",
+                btn_close: "✖ Close",
+                placeholder: "Enter prompt...",
+                voice_label: "VOICE:",
+                speed_label: "SPEED:",
+                sys_ready: "SYSTEM READY...",
+                processing: "<span class='loading'>PROCESSING...</span>",
+                mic_listening: "<span class='loading'>🎤 LISTENING...</span>",
+                err_cam: "Error: Camera access denied.",
+                err_mic: "Voice input is not supported.",
+                err_no_key: "Please enter your API key on the start screen first!"
+            }
+        };
+
+        // --- TEMPO SLIDER LOGIK ---
+        speedSlider.oninput = function() {
+            speedValue.innerText = this.value + "x";
+        }
+
+        // --- STIMMEN-LOGIK ---
+        function populateVoiceList() {
+            allVoices = window.speechSynthesis.getVoices();
+            voiceSelect.innerHTML = ''; 
+            
+            const langPrefix = currentLang === 'de' ? 'de' : 'en';
+            let availableVoices = allVoices.filter(v => v.lang.startsWith(langPrefix));
+            
+            if(availableVoices.length === 0) availableVoices = allVoices; 
+
+            if(availableVoices.length === 0) {
+                let option = document.createElement('option');
+                option.textContent = "System Default";
+                option.value = "default";
+                voiceSelect.appendChild(option);
+                return;
+            }
+
+            availableVoices.sort((a, b) => {
+                const aPremium = a.name.includes('Google') || a.name.includes('Premium') || a.name.includes('Anna') || a.name.includes('Helena') || a.name.includes('Samantha');
+                const bPremium = b.name.includes('Google') || b.name.includes('Premium') || b.name.includes('Anna') || b.name.includes('Helena') || b.name.includes('Samantha');
+                return (aPremium === bPremium) ? 0 : aPremium ? -1 : 1;
+            });
+
+            availableVoices.forEach((voice) => {
+                let option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.setAttribute('data-name', voice.name);
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        window.speechSynthesis.onvoiceschanged = populateVoiceList;
+        populateVoiceList();
+
+        // --- SPRACH-WECHSEL ---
+        function updateLangUI() {
+            const t = i18n[currentLang];
+            
+            document.getElementById('lang-toggle').innerText = currentLang === 'de' ? 'EN' : 'DE';
+            
+            // Texte austauschen
+            document.getElementById('ui-subtitle').innerText = t.subtitle;
+            document.getElementById('key-card-title').innerText = t.key_title;
+            document.getElementById('key-card-desc').innerText = t.key_desc;
+            document.getElementById('key-safe-note').innerText = t.key_safe;
+            document.getElementById('ui-s1-title').innerText = t.s1_title;
+            document.getElementById('ui-s1-desc').innerText = t.s1_desc;
+            document.getElementById('ui-s1-l1').innerText = t.s1_l1;
+            document.getElementById('ui-s1-l2').innerText = t.s1_l2;
+            document.getElementById('ui-s1-l3').innerText = t.s1_l3;
+            document.getElementById('to-sim-btn').innerText = t.btn_sim;
+            document.getElementById('ui-s2-title').innerText = t.s2_title;
+            document.getElementById('to-camera-btn').innerText = t.btn_cam;
+            document.getElementById('back-to-intro-btn').innerText = t.btn_back;
+            document.getElementById('back-to-sim-btn').innerText = t.btn_back;
+            document.getElementById('show-schematic-btn').innerText = t.btn_schematic;
+            document.getElementById('close-schematic').innerText = t.btn_close;
+            document.getElementById('text-input').placeholder = t.placeholder;
+            document.getElementById('voice-label').innerText = t.voice_label;
+            document.getElementById('speed-label').innerText = t.speed_label;
+            
+            // AUTOMATISCHE TEMPO-UMSTELLUNG
+            const targetSpeed = currentLang === 'de' ? "1.20" : "1.00";
+            speedSlider.value = targetSpeed;
+            speedValue.innerText = targetSpeed + "x";
+
+            if(resultBox.innerText.includes("SYSTEM BEREIT") || resultBox.innerText.includes("SYSTEM READY")) {
+                resultBox.innerText = t.sys_ready;
+            }
+            
+            populateVoiceList();
+        }
+
+        document.getElementById('lang-toggle').onclick = () => { 
+            currentLang = currentLang === 'de' ? 'en' : 'de'; 
+            updateLangUI(); 
+        };
+
+        // Navigation
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id !== 'tutor-screen' && currentStream) {
+                currentStream.getTracks().forEach(t => t.stop());
+            }
+        }
+
+        document.getElementById('to-sim-btn').onclick = () => showScreen('simulator-screen');
+        document.getElementById('back-to-intro-btn').onclick = () => showScreen('intro-screen');
+        document.getElementById('to-camera-btn').onclick = () => { showScreen('tutor-screen'); startCamera(); };
+        document.getElementById('back-to-sim-btn').onclick = () => showScreen('simulator-screen');
+
+        document.getElementById('show-schematic-btn').onclick = () => schematicOverlay.classList.add('active');
+        document.getElementById('close-schematic').onclick = () => schematicOverlay.classList.remove('active');
+
+        async function startCamera() {
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = currentStream;
+            } catch (err) { resultBox.innerHTML = i18n[currentLang].err_cam; }
+        }
+
+        async function runTutor(q) {
+            // SICHERHEITSCHECK: Gibt es einen eingetragenen Key?
+            const currentApiKey = localStorage.getItem('phoenix_api_key');
+            if (!currentApiKey || currentApiKey.trim() === "") {
+                resultBox.innerHTML = `<span style="color:var(--primary); font-weight:bold;">⚠️ ${i18n[currentLang].err_no_key}</span>`;
+                showScreen('intro-screen');
+                return;
+            }
+
+            window.speechSynthesis.cancel(); 
+            resultBox.innerHTML = i18n[currentLang].processing;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const base64Img = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+
+            // DYNAMISCHER SYSTEM PROMPT
+            let systemPrompt = "";
+            if (currentLang === 'de') {
+                systemPrompt = `Du bist der "Phoenix Tutor". Beantworte die Frage: "${q}" basierend auf dem Bild. 
+                Antworte kurz (2-3 Sätze) auf Deutsch. Weise ggf. auf den Schaltplan-Button hin.`;
+            } else {
+                systemPrompt = `You are the "Phoenix Tutor". Answer the question: "${q}" based on the image. 
+                Answer briefly (2-3 sentences) in English. Point out the schematic button if necessary.`;
+            }
+
+            try {
+                // Dynamisch die Google Generative AI mit dem individuellen Key des Schülers initialisieren
+                const activeGenAI = new GoogleGenerativeAI(currentApiKey);
+                const activeModel = activeGenAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+                let res = await activeModel.generateContent([systemPrompt, { inlineData: { data: base64Img, mimeType: "image/jpeg" } }]);
+                let text = await res.response.text();
+                
+                resultBox.innerHTML = `<span style="color:#9e9e9e">>_ OUTPUT:</span><br>${text}`;
+                speak(text);
+            } catch (e) { resultBox.innerHTML = "KI Fehler / AI Error: " + e.message; }
+        }
+
+        // --- SPRACH-AUSGABE ---
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLang === 'de' ? 'de-DE' : 'en-US';
+            utterance.pitch = 1.0; 
+            utterance.rate = parseFloat(speedSlider.value); 
+
+            const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+            
+            if (selectedOption && selectedOption.value !== "default") {
+                const selectedVoiceName = selectedOption.getAttribute('data-name');
+                const selectedVoice = allVoices.find(v => v.name === selectedVoiceName);
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        sendBtn.onclick = () => runTutor(textInput.value);
+        textInput.onkeypress = (e) => { if(e.key === 'Enter') runTutor(textInput.value); };
+
+        // --- MIKROFON ---
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognitionObj = null;
+
+        if (Recognition) {
+            recognitionObj = new Recognition(); 
+            recognitionObj.interimResults = false;
+            
+            voiceBtn.onclick = () => { 
+                recognitionObj.lang = currentLang === 'de' ? 'de-DE' : 'en-US';
+                recognitionObj.start(); 
+                resultBox.innerHTML = i18n[currentLang].mic_listening; 
+            };
+            
+            recognitionObj.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                textInput.value = transcript; 
+                runTutor(transcript);
+            };
+
+            recognitionObj.onerror = (e) => {
+                resultBox.innerHTML = "<span style='color:var(--primary);'>Error: " + e.error + "</span>";
+            }
+        } else {
+            voiceBtn.onclick = () => alert(i18n[currentLang].err_mic);
+        }
+    </script>
+</body>
+</html>

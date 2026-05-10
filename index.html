@@ -340,7 +340,7 @@
         </div>
 
         <div id="result-box">SYSTEM BEREIT...</div>
-        <button id="back-to-sim-btn" class="btn-full btn-back" style="margin-top: 20px;">← Zurück</button>
+        <button id="back-to-sim-btn" class="btn-full btn-back" style="margin-top: 20px;">• Zurück</button>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
@@ -554,13 +554,24 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             const base64Img = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 
+            // --- NEUER, HYBRIDER SYSTEM PROMPT FÜR INTELLIGENTES ANTWORTVERHALTEN ---
             let systemPrompt = "";
             if (currentLang === 'de') {
-                systemPrompt = `Du bist der "Phoenix Tutor". Beantworte die Frage: "${q}" basierend auf dem Bild. 
-                Antworte kurz (2-3 Sätze) auf Deutsch. Weise ggf. auf den Schaltplan-Button hin.`;
+                systemPrompt = `Du bist der "Phoenix Tutor", ein hilfreicher KI-Lehrer für Arduino-Elektronik. 
+                Beantworte die Frage des Schülers: "${q}".
+                
+                WICHTIGE VERHALTENSREGELN:
+                1. Wenn die Frage allgemein/theoretisch ist (z.B. "Was ist eine LED?", "Wo ist Plus/Minus?", "Wie bringe ich sie zum Blinken?"), beantworte sie sofort klar, freundlich und verständlich. Verlange in diesem Fall KEIN Bild!
+                2. Wenn die Frage sich auf einen Fehler in der realen Schaltung bezieht (z.B. "Warum leuchtet meine LED nicht?" oder "Ist das so richtig?"), nutze das mitgesendete Bild für eine genaue Fehleranalyse. Erkläre dem Schüler sachlich, was er auf seinem Steckbrett anpassen muss.
+                3. Antworte immer kurz, präzise (maximal 3-4 Sätze) und schülerfreundlich auf Deutsch.`;
             } else {
-                systemPrompt = `You are the "Phoenix Tutor". Answer the question: "${q}" based on the image. 
-                Answer briefly (2-3 sentences) in English. Point out the schematic button if necessary.`;
+                systemPrompt = `You are the "Phoenix Tutor", a helpful AI teacher for Arduino electronics. 
+                Answer the student's question: "${q}".
+                
+                IMPORTANT RULES:
+                1. If the question is general or theoretical (e.g., "What is an LED?", "Where is positive/negative?", "How do I make it blink?"), answer it immediately in a clear, friendly, and easy-to-understand way. Do NOT ask for an image in this case!
+                2. If the question refers to a physical error on their breadboard (e.g., "Why is my LED not lighting up?" or "Is this correct?"), analyze the attached image carefully to find the mistake and explain how to fix it.
+                3. Keep your response brief, precise (maximum 3-4 sentences), and student-friendly in English.`;
             }
 
             try {

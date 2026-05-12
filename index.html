@@ -388,10 +388,8 @@
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
-    <!-- HIER WURDE DER IMPORT-LINK FÜR MEHR STABILITÄT ANGEPASST -->
-    <script type="module">
-        import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
-
+    <!-- WICHTIG: Das 'type="module"' wurde hier entfernt! -->
+    <script>
         // --- KEY CONFIGURATION ---
         const keyInput = document.getElementById('api-key-input');
         
@@ -585,7 +583,7 @@
             } catch (err) { resultBox.innerHTML = i18n[currentLang].err_cam; }
         }
 
-        // --- INTELLIGENTE MULTIMODALE ANFRAGE (Bilder + Code) ---
+        // --- DIREKTE API-KOMMUNIKATION (Sicher bei lokaler Ausführung) ---
         async function runTutor(q) {
             const currentApiKey = keyInput.value.trim();
             if (!currentApiKey || currentApiKey === "") {
@@ -635,11 +633,31 @@
             }
 
             try {
-                const activeGenAI = new GoogleGenerativeAI(currentApiKey);
-                const activeModel = activeGenAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                // REST API Aufruf - Blockiert nicht bei lokalen HTML-Dateien!
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentApiKey}`;
+                
+                const requestBody = {
+                    contents: [{
+                        parts: [
+                            { text: systemPrompt },
+                            { inlineData: { mimeType: "image/jpeg", data: base64Img } }
+                        ]
+                    }]
+                };
 
-                let res = await activeModel.generateContent([systemPrompt, { inlineData: { data: base64Img, mimeType: "image/jpeg" } }]);
-                let text = await res.response.text();
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error?.message || "API Request failed");
+                }
+
+                const data = await response.json();
+                let text = data.candidates[0].content.parts[0].text;
                 
                 // FEHLER-KORREKTUR für Markdown-Syntax
                 text = text.replace(/!\s+\[/g, '![');

@@ -606,17 +606,17 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             const base64Img = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 
-            // DYNAMISCH-BOMBENFESTE BILDERSUCHE ÜBER LOREMFLICKR API
+            // DYNAMISCH-BOMBENFESTE BILDERSUCHE ÜBER UNSPLASH SEARCH API
             let systemPrompt = "";
             if (currentLang === 'de') {
                 systemPrompt = `Du bist der "Phoenix Tutor", ein hilfreicher KI-Assistent für Arduino-Schüler.
                 Beantworte die Schülerfrage: "${q}" basierend auf dem Kamerabild (falls nötig).
                 
                 WICHTIGE INSTRUKTIONEN:
-                1. Wenn der Schüler nach dem Aussehen von Elektronikbauteilen fragt (z.B. LED, Widerstand, Breadboard, Arduino, Servomotor, etc.), MUSST du ein passendes Bild im Markdown-Format einbinden. 
-                   Nutze dafür die dynamische Flickr-API nach genau diesem Schema (ersetze [bauteil] durch den englischen Begriff des Bauteils, z.B. "led", "resistor", "arduino", "breadboard"):
-                   ![[bauteil]](https://loremflickr.com/400/300/[bauteil])
-                   Beispiel: Wenn der Schüler nach einer LED fragt, antworte mit: ! [led](https://loremflickr.com/400/300/led) (ohne Leerzeichen zwischen ! und [)
+                1. Wenn der Schüler nach dem Aussehen von Elektronikbauteilen fragt (z.B. LED, Widerstand, Breadboard, Arduino, Servomotor, etc.), MUSS du ein passendes Bild im Markdown-Format einbinden. 
+                   Nutze dafür die dynamische Unsplash-Such-API nach genau diesem Schema (ersetze [bauteil] durch den englischen Begriff des Bauteils, z.B. "led", "resistor", "arduino", "breadboard"):
+                   ![[bauteil]](https://images.unsplash.com/featured/?[bauteil])
+                   Beispiel: Wenn der Schüler nach einer LED fragt, antworte mit: ! [led](https://images.unsplash.com/featured/?led) (ohne Leerzeichen zwischen ! und [)
                 2. Wenn der Schüler nach Code fragt, gebe sauberen Arduino C++ Code in einem standardisierten Code-Block aus:
                    \`\`\`cpp
                    // Code hier
@@ -628,9 +628,9 @@
                 
                 IMPORTANT INSTRUCTIONS:
                 1. If the student asks how components look like (e.g., LED, Resistor, Breadboard, Arduino, Servo Motor, etc.), you MUST include a fitting image in Markdown format. 
-                   Use the dynamic Flickr API exactly like this (replace [component] with the English term of the component, e.g. "led", "resistor", "arduino", "breadboard"):
-                   ![[component]](https://loremflickr.com/400/300/[component])
-                   Example: If they ask for an LED, respond with: ! [led](https://loremflickr.com/400/300/led) (without spaces between ! and [)
+                   Use the dynamic Unsplash search API exactly like this (replace [component] with the English term of the component, e.g. "led", "resistor", "arduino", "breadboard"):
+                   ![[component]](https://images.unsplash.com/featured/?[component])
+                   Example: If they ask for an LED, respond with: ! [led](https://images.unsplash.com/featured/?led) (without spaces between ! and [)
                 2. If the student asks for code, provide clean Arduino C++ code inside a standard markdown code block:
                    \`\`\`cpp
                    // Code here
@@ -652,8 +652,7 @@
                 Prism.highlightAllUnder(resultBox);
 
                 // Sprachausgabe (Liest nur den Text vor, filtert Bild-Syntax und Code heraus)
-                const textToSpeak = text.replace(/!\[.*?\]\(.*?\)/g, "").replace(/```[\s\S]*?
-```/g, "");
+                const textToSpeak = text.replace(/!\[.*?\]\(.*?\)/g, "").replace(/```[\s\S]*?```/g, "");
                 speak(textToSpeak);
             } catch (e) { resultBox.innerHTML = "KI Fehler / AI Error: " + e.message; }
         }

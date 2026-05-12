@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phoenix Tutor</title>
+    <link rel="manifest" href="manifest.json">
     
-    <!-- ENGINES -->
+    <!-- EXTERNE ENGINES -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
@@ -13,146 +14,218 @@
 
     <style>
         :root { 
-            --bg: #0d0d0d; --card-bg: #1a1a1a; --text: #f0f0f0;            
-            --primary: #e3000f; --accent: #00ff00;
+            --bg: #0d0d0d; --card-bg: #1a1a1a; --input-bg: #262626; --text: #f0f0f0;            
+            --primary: #e3000f; --border-color: #333333; --accent: #00ff00;
         }
-        body { font-family: sans-serif; background-color: var(--bg); color: var(--text); margin: 0; text-align: center; }
-        header { padding: 20px; border-bottom: 2px solid #333; background: #111; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        header { padding: 20px; text-align: center; width: 100%; border-bottom: 2px solid var(--border-color); background: rgba(13,13,13,0.9); }
+        .screen { width: 100%; max-width: 600px; display: none; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; }
+        .screen.active { display: flex; }
         
-        /* NAVIGATION */
-        .screen { width: 100%; max-width: 600px; display: none; margin: 0 auto; padding: 20px; box-sizing: border-box; }
-        .screen.active { display: block; }
+        .intro-card { background: var(--card-bg); width: 100%; border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid var(--primary); box-sizing: border-box; }
         
-        .card { background: var(--card-bg); border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 4px solid var(--primary); text-align: left; }
+        /* RESULT BOX DESIGN */
+        #result-container { width: 100%; margin-top: 20px; position: relative; }
+        #result-box { 
+            width: 100%; background: #000; padding: 20px; border-radius: 8px; 
+            border: 1px solid var(--border-color); border-left: 4px solid var(--primary); 
+            line-height: 1.6; min-height: 100px; box-sizing: border-box;
+        }
+        #result-box img { max-width: 100%; border-radius: 6px; margin: 15px 0; display: block; border: 1px solid #444; }
+        #result-box pre { background: #151515 !important; padding: 12px; border-radius: 6px; overflow-x: auto; border: 1px solid #333; }
         
-        .btn-full { width: 100%; padding: 18px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; text-transform: uppercase; background: var(--primary); color: white; }
-        .btn-back { background: #333; margin-top: 20px; }
+        /* VORLESEN BUTTON */
+        #speak-btn {
+            display: none; position: absolute; top: 10px; right: 10px;
+            background: var(--primary); color: white; border: none; 
+            border-radius: 50%; width: 40px; height: 40px; cursor: pointer;
+            box-shadow: 0 0 10px rgba(227, 0, 15, 0.5); z-index: 10; font-size: 1.2rem;
+        }
+        #speak-btn.playing { background: var(--accent); animation: pulse 1.5s infinite; }
+
+        .input-group { width: 100%; display: flex; gap: 10px; margin-top: 20px; }
+        #text-input { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: white; padding: 15px; outline: none; }
+        .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; width: 55px; height: 55px; cursor: pointer; color: white; font-size: 1.4rem; }
         
-        iframe { width: 100%; height: 450px; border: none; border-radius: 8px; background: white; }
+        .btn-full { width: 100%; padding: 18px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-next { background: var(--primary); color: white; }
+        .btn-back { background: #333; color: white; font-size: 0.8rem; }
+        
         #video-container { width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid var(--primary); background: #000; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        .input-group { display: flex; gap: 10px; margin-top: 20px; }
-        #text-input { flex: 1; padding: 15px; border-radius: 6px; border: 1px solid #333; background: #222; color: white; }
-        #result-box { background: #000; padding: 15px; border-radius: 6px; margin-top: 20px; border-left: 4px solid var(--primary); text-align: left; line-height: 1.6; }
+        .loading { color: var(--primary); font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         
-        #speak-btn { display: none; margin-bottom: 10px; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; }
+        ul { padding-left: 20px; color: #ccc; }
+        li { margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1 style="margin:0;">PHOENIX TUTOR</h1>
-        <small style="color: var(--primary);">VERSUCH 1: BLINK</small>
+        <h1 style="margin:0; letter-spacing: 2px;">PHOENIX TUTOR</h1>
+        <div style="color: var(--primary); font-size: 0.8rem; font-weight: bold; margin-top: 5px;">SYS.MOD // VERSUCH 1: BLINK</div>
     </header>
 
-    <!-- SCREEN 1 -->
-    <div id="screen-setup" class="screen active">
-        <div class="card">
-            <h3>🔑 API Setup</h3>
-            <input type="password" id="api-key-input" placeholder="Key hier einfügen..." style="width:100%; padding:10px; box-sizing:border-box;">
-            <p><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:red; font-size:12px;">➔ Kostenlosen Key hier holen</a></p>
+    <!-- SCREEN 1: SETUP -->
+    <div id="intro-screen" class="screen active">
+        <div class="intro-card">
+            <h2 style="margin-top:0;">🔑 Setup & API-Key</h2>
+            <p style="color: #999; font-size: 0.85rem; margin-bottom: 15px;">
+                Du benötigst einen kostenlosen Key, damit die KI antworten kann:
+            </p>
+            <input type="password" id="api-key-input" placeholder="Hier Key einfügen..." style="width:100%; padding:12px; background:#000; color:var(--accent); border:1px solid #444; border-radius:4px; box-sizing: border-box; font-family: monospace; margin-bottom: 10px;">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary); font-size: 0.8rem; text-decoration: none; font-weight: bold;">➔ Hier klicken: Kostenlosen Key holen</a>
         </div>
-        <div class="card">
-            <h3>📋 Infos</h3>
-            <p>Ziel: LED blinken lassen.</p>
+        
+        <div class="intro-card">
+            <h2 style="margin-top:0;">📋 Versuchsbeschreibung</h2>
+            <p style="font-size: 0.9rem; color: #ccc;"><strong>Ziel:</strong> Bringe eine LED zum Blinken.</p>
+            <ul>
+                <li>Arduino Uno + USB Kabel</li>
+                <li>Breadboard & Jumper Kabel</li>
+                <li>LED (rot) + 220Ω Widerstand</li>
+            </ul>
         </div>
-        <button onclick="nav('screen-sim')" class="btn-full">Zum Simulator ➤</button>
+        <button id="to-sim-btn" class="btn-full btn-next">Zum Simulator ➤</button>
     </div>
 
-    <!-- SCREEN 2 -->
-    <div id="screen-sim" class="screen">
-        <div class="card" style="padding:5px;">
-            <iframe src="https://www.tinkercad.com/embed/0qzHAwev1Hb?editbtn=1"></iframe>
+    <!-- SCREEN 2: SIMULATOR -->
+    <div id="simulator-screen" class="screen">
+        <div class="intro-card" style="padding:10px;">
+            <div style="width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+                <iframe src="https://www.tinkercad.com/embed/0qzHAwev1Hb?editbtn=1" style="width:100%; height:450px; border:none;"></iframe>
+            </div>
         </div>
-        <button onclick="startCam()" class="btn-full">Hardware-Check ➤</button>
-        <button onclick="nav('screen-setup')" class="btn-full btn-back">Zurück</button>
+        <button id="to-camera-btn" class="btn-full btn-next">Hardware-Check ➤</button>
+        <button id="back-to-intro-btn" class="btn-full btn-back">Zurück zum Setup</button>
     </div>
 
-    <!-- SCREEN 3 -->
-    <div id="screen-tutor" class="screen">
+    <!-- SCREEN 3: TUTOR -->
+    <div id="tutor-screen" class="screen">
         <div id="video-container">
             <video id="webcam" autoplay playsinline></video>
         </div>
+        
         <div class="input-group">
             <input type="text" id="text-input" placeholder="Frag mich was...">
-            <button id="send-btn" style="padding:15px; background:red; color:white; border:none; border-radius:6px;">OK</button>
+            <button id="send-btn" class="icon-btn">➤</button>
+            <button id="voice-btn" class="icon-btn">🎤</button>
         </div>
-        <div id="result-box">
-            <button id="speak-btn">🔊 VORLESEN</button>
-            <div id="output">WARTE...</div>
+
+        <div id="result-container">
+            <button id="speak-btn" title="Vorlesen">🔊</button>
+            <div id="result-box">BEREIT...</div>
         </div>
-        <button onclick="stopCam()" class="btn-full btn-back">Zurück zum Simulator</button>
+        
+        <button id="back-to-sim-btn" class="btn-full btn-back" style="margin-top:20px;">Zurück zum Simulator</button>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-        // Globale Navigation
-        window.nav = function(id) {
+        // DOM Elemente
+        const keyInput = document.getElementById('api-key-input');
+        const video = document.getElementById('webcam');
+        const resultBox = document.getElementById('result-box');
+        const textInput = document.getElementById('text-input');
+        const canvas = document.getElementById('canvas');
+        const speakBtn = document.getElementById('speak-btn');
+        let currentFullText = ""; 
+        let videoStream = null;
+
+        // Key Laden/Speichern
+        if (localStorage.getItem('p_key')) keyInput.value = localStorage.getItem('p_key');
+        keyInput.oninput = () => localStorage.setItem('p_key', keyInput.value);
+
+        // Navigation
+        function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-        };
-
-        const keyField = document.getElementById('api-key-input');
-        if(localStorage.getItem('p_key')) keyField.value = localStorage.getItem('p_key');
-        keyField.oninput = () => localStorage.setItem('p_key', keyField.value);
-
-        let stream = null;
-        let lastRes = "";
-
-        window.startCam = async function() {
-            window.nav('screen-tutor');
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            document.getElementById('webcam').srcObject = stream;
-        };
-
-        window.stopCam = function() {
-            if(stream) stream.getTracks().forEach(t => t.stop());
-            window.nav('screen-sim');
-        };
-
-        async function askAI() {
-            const k = localStorage.getItem('p_key');
-            if(!k) return alert("Key fehlt!");
-            
-            const out = document.getElementById('output');
-            const tin = document.getElementById('text-input');
-            const v = document.getElementById('webcam');
-            const c = document.getElementById('canvas');
-            const spk = document.getElementById('speak-btn');
-
-            out.innerHTML = "Phoenix denkt...";
-            spk.style.display = "none";
-
-            c.width = v.videoWidth; c.height = v.videoHeight;
-            c.getContext('2d').drawImage(v, 0, 0);
-            const base64 = c.toDataURL('image/jpeg', 0.7).split(',')[1];
-
-            try {
-                const genAI = new GoogleGenerativeAI(k);
-                const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-                const prompt = "Du bist Phoenix Tutor. Hilf kurz auf Deutsch beim Arduino-Versuch. Frage: " + tin.value;
-                
-                const res = await model.generateContent([prompt, { inlineData: { data: base64, mimeType: "image/jpeg" } }]);
-                lastRes = await res.response.text();
-                
-                out.innerHTML = marked.parse(lastRes);
-                Prism.highlightAllUnder(out);
-                spk.style.display = "block";
-            } catch(e) { out.innerText = "Fehler: " + e.message; }
         }
 
-        document.getElementById('send-btn').onclick = askAI;
-        document.getElementById('speak-btn').onclick = () => {
-            window.speechSynthesis.cancel();
-            let clean = lastRes.replace(/!\[.*?\]\(.*?\)/g, "").replace(/```[\s\S]*?
-```/g, "Code in Box.").replace(/[*#_`]/g, "");
-            const u = new SpeechSynthesisUtterance(clean);
-            u.lang = 'de-DE';
-            window.speechSynthesis.speak(u);
+        document.getElementById('to-sim-btn').onclick = () => showScreen('simulator-screen');
+        
+        document.getElementById('to-camera-btn').onclick = async () => {
+            showScreen('tutor-screen');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = videoStream;
+            } catch(e) { resultBox.innerText = "Kamerafehler: " + e.message; }
         };
+
+        document.getElementById('back-to-intro-btn').onclick = () => showScreen('intro-screen');
+        
+        document.getElementById('back-to-sim-btn').onclick = () => {
+            if(videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+                videoStream = null;
+            }
+            showScreen('simulator-screen');
+        };
+
+        // TTS Logik
+        speakBtn.onclick = () => {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                speakBtn.classList.remove('playing');
+                return;
+            }
+            let clean = currentFullText
+                .replace(/!\[.*?\]\(.*?\)/g, "")
+                .replace(/```[\s\S]*?
+```/g, " Hier ist der Code in der Box. ")
+                .replace(/[*#_`]/g, "").trim();
+
+            if (!clean) return;
+            const ut = new SpeechSynthesisUtterance(clean);
+            ut.lang = 'de-DE';
+            ut.onstart = () => speakBtn.classList.add('playing');
+            ut.onend = () => speakBtn.classList.remove('playing');
+            window.speechSynthesis.speak(ut);
+        };
+
+        // KI Abfrage
+        async function run(q) {
+            const key = localStorage.getItem('p_key');
+            if (!key) return alert("Key fehlt!");
+            
+            window.speechSynthesis.cancel();
+            speakBtn.style.display = "none";
+            resultBox.innerHTML = "<span class='loading'>Phoenix denkt nach...</span>";
+            
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const imgData = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+
+            const prompt = `Du bist Phoenix Tutor. Hilf beim Arduino-Versuch "Blink". Antworte kurz auf Deutsch. 
+            Bilder: ![name](https://images.unsplash.com/featured/?[name]). Code: \`\`\`cpp \`\`\`. Frage: ${q}`;
+
+            try {
+                const genAI = new GoogleGenerativeAI(key);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const res = await model.generateContent([prompt, { inlineData: { data: imgData, mimeType: "image/jpeg" } }]);
+                currentFullText = await res.response.text();
+                
+                resultBox.innerHTML = marked.parse(currentFullText);
+                Prism.highlightAllUnder(resultBox);
+                speakBtn.style.display = "block";
+            } catch (e) { resultBox.innerText = "Fehler: " + e.message; }
+        }
+
+        document.getElementById('send-btn').onclick = () => run(textInput.value);
+        textInput.onkeypress = (e) => { if(e.key === 'Enter') run(textInput.value); };
+
+        // Mikrofon
+        const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (Rec) {
+            const rec = new Rec(); rec.lang = 'de-DE';
+            document.getElementById('voice-btn').onclick = () => rec.start();
+            rec.onresult = (e) => { textInput.value = e.results[0][0].transcript; run(textInput.value); };
+        }
     </script>
 </body>
 </html>

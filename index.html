@@ -178,7 +178,7 @@
             color: #ffffff;
         }
         
-        /* INTERAKTIVE RESPONSIVE OUTPUT BOX (MARKDOWN & BILD-SUPPORT) */
+        /* INTERAKTIVE RESPONSIVE OUTPUT BOX */
         #result-box { 
             width: 90%; 
             background: #0d0d0d; 
@@ -196,7 +196,6 @@
             word-break: break-word; 
         }
 
-        /* Styling für ausgegebene Markdown-Bilder */
         #result-box img {
             max-width: 100%;
             height: auto;
@@ -209,7 +208,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        /* Styling für ausgegebene Code-Blöcke */
         #result-box pre {
             background: #151515 !important;
             padding: 15px;
@@ -269,9 +267,7 @@
             flex: 1;
             background: transparent;
         }
-        input[type=range]:focus {
-            outline: none;
-        }
+        input[type=range]:focus { outline: none; }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
             height: 6px;
@@ -337,12 +333,10 @@
     <div id="simulator-screen" class="screen">
         <div class="intro-card" style="width: 95%; margin-bottom: 15px;">
             <h2 id="ui-s2-title">Schritt 2: Virtual Block-Test</h2>
-            
             <p id="tinkercad-info-text" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; margin-bottom: 12px; text-align: center; line-height: 1.4;">
                 🏫 <strong>Unterrichts-Tipp:</strong> Melde dich mit deinem Klassen-Code an oder öffne Tinkercad im Vollbild:<br>
                 <a href="https://www.tinkercad.com/joinclass" target="_blank" id="tinkercad-class-link" style="color: var(--primary); text-decoration: underline; font-weight: bold; margin-top: 5px; display: inline-block;">Klassenraum beitreten ↗</a>
             </p>
-
             <div class="iframe-container">
                 <iframe src="https://www.tinkercad.com/embed/0qzHAwev1Hb?editbtn=1" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>
             </div>
@@ -355,7 +349,6 @@
         <div id="video-container">
             <video id="webcam" autoplay playsinline></video>
             <div class="guide"></div>
-            
             <div id="schematic-overlay">
                 <div id="schematic-img-container">
                     <img src="mein-eigener-schaltplan.jpg" alt="Schaltplan" style="width: 100%; border-radius: 4px; display: block;" onerror="this.src='https://placehold.co/400x300/1a1a1a/e3000f?text=DEIN+BILD+HIER+EINFUEGEN'">
@@ -395,18 +388,21 @@
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
+    <!-- HIER WURDE DER IMPORT-LINK FÜR MEHR STABILITÄT ANGEPASST -->
     <script type="module">
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
 
         // --- KEY CONFIGURATION ---
         const keyInput = document.getElementById('api-key-input');
         
-        if (localStorage.getItem('phoenix_api_key')) {
-            keyInput.value = localStorage.getItem('phoenix_api_key');
-        }
+        try {
+            if (localStorage.getItem('phoenix_api_key')) {
+                keyInput.value = localStorage.getItem('phoenix_api_key');
+            }
+        } catch(e) { console.warn("Lokaler Speicher blockiert."); }
 
         keyInput.oninput = () => {
-            localStorage.setItem('phoenix_api_key', keyInput.value);
+            try { localStorage.setItem('phoenix_api_key', keyInput.value); } catch(e) {}
         };
 
         const video = document.getElementById('webcam');
@@ -591,8 +587,8 @@
 
         // --- INTELLIGENTE MULTIMODALE ANFRAGE (Bilder + Code) ---
         async function runTutor(q) {
-            const currentApiKey = localStorage.getItem('phoenix_api_key');
-            if (!currentApiKey || currentApiKey.trim() === "") {
+            const currentApiKey = keyInput.value.trim();
+            if (!currentApiKey || currentApiKey === "") {
                 resultBox.innerHTML = `<span style="color:var(--primary); font-weight:bold;">⚠️ ${i18n[currentLang].err_no_key}</span>`;
                 showScreen('intro-screen');
                 return;
@@ -606,7 +602,7 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             const base64Img = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 
-            // NEUER BILD-DIENST: Pollinations.ai (Generiert KI-Bilder on the fly für Markdown)
+            // BILD-DIENST: Pollinations.ai
             let systemPrompt = "";
             if (currentLang === 'de') {
                 systemPrompt = `Du bist der "Phoenix Tutor", ein hilfreicher KI-Assistent für Arduino-Schüler.
@@ -639,23 +635,22 @@
             }
 
             try {
-                // MODELL BLEIBT UNVERÄNDERT WIE GEWÜNSCHT!
                 const activeGenAI = new GoogleGenerativeAI(currentApiKey);
                 const activeModel = activeGenAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
                 let res = await activeModel.generateContent([systemPrompt, { inlineData: { data: base64Img, mimeType: "image/jpeg" } }]);
                 let text = await res.response.text();
                 
-                // FEHLER-KORREKTUR: Entfernt versehentliche Leerzeichen zwischen ! und [ bei Markdown-Bildern
+                // FEHLER-KORREKTUR für Markdown-Syntax
                 text = text.replace(/!\s+\[/g, '![');
                 
-                // Markdown in HTML parsen (Bilder & Code-Blöcke rendern!)
+                // Markdown parsen
                 resultBox.innerHTML = marked.parse(text);
                 
-                // Prism.js anweisen, das Code-Highlighting auf den neuen Code anzuwenden
+                // Syntax Highlighting
                 Prism.highlightAllUnder(resultBox);
 
-                // Sprachausgabe (Liest nur den Text vor, filtert Bild-Syntax und Code heraus)
+                // Sprachausgabe generieren (Bilder und Code ignorieren)
                 const textToSpeak = text.replace(/!\[.*?\]\(.*?\)/g, "").replace(/```[\s\S]*?
 ```/g, "");
                 speak(textToSpeak);

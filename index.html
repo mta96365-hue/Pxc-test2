@@ -19,6 +19,7 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         header { padding: 20px; text-align: center; width: 100%; border-bottom: 2px solid var(--border-color); background: rgba(13,13,13,0.9); box-sizing: border-box; }
         
+        /* NAVIGATION SYSTEM */
         .screen { width: 100%; max-width: 600px; display: none; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; }
         .screen.active { display: flex; }
         
@@ -67,11 +68,8 @@
     <div id="intro-screen" class="screen active">
         <div class="intro-card">
             <h2 style="margin-top:0;">🔑 Setup & API-Key</h2>
-            <p style="color: #999; font-size: 0.85rem; margin-bottom: 15px;">
-                Hol dir hier einen kostenlosen Key, damit die KI antworten kann:
-            </p>
             <input type="password" id="api-key-input" placeholder="Hier Key einfügen..." style="width:100%; padding:12px; background:#000; color:var(--accent); border:1px solid #444; border-radius:4px; box-sizing: border-box; font-family: monospace; margin-bottom: 10px;">
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary); font-size: 0.8rem; text-decoration: none; font-weight: bold;">➔ Hier klicken: Kostenlosen Key holen</a>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary); font-size: 0.8rem; text-decoration: none; font-weight: bold;">➔ Kostenlosen Key holen</a>
         </div>
         
         <div class="intro-card">
@@ -79,11 +77,11 @@
             <p style="font-size: 0.9rem; color: #ccc;"><strong>Ziel:</strong> Programmiere ein Blink-Signal für eine LED.</p>
             <ul style="color: #999; font-size: 0.85rem; padding-left: 20px;">
                 <li>Arduino Uno + USB Kabel</li>
-                <li>Breadboard & Jumper Kabel</li>
                 <li>LED (rot) + 220Ω Widerstand</li>
             </ul>
         </div>
-        <button id="btn-goto-sim" class="btn-full btn-next">Zum Simulator ➤</button>
+        <!-- DER KRITISCHE BUTTON -->
+        <button onclick="nav('simulator-screen')" class="btn-full btn-next">Zum Simulator ➤</button>
     </div>
 
     <!-- SCREEN 2: SIMULATOR -->
@@ -93,8 +91,8 @@
                 <iframe src="https://www.tinkercad.com/embed/0qzHAwev1Hb?editbtn=1" style="width:100%; height:450px; border:none;"></iframe>
             </div>
         </div>
-        <button id="btn-goto-cam" class="btn-full btn-next">Hardware-Check ➤</button>
-        <button id="btn-back-to-setup" class="btn-full btn-back">Zurück zum Setup</button>
+        <button onclick="startHardwareCheck()" class="btn-full btn-next">Hardware-Check ➤</button>
+        <button onclick="nav('intro-screen')" class="btn-full btn-back">Zurück zum Setup</button>
     </div>
 
     <!-- SCREEN 3: TUTOR -->
@@ -110,65 +108,69 @@
         </div>
 
         <div id="result-container">
-            <button id="speak-btn" title="Vorlesen">🔊</button>
-            <div id="result-box">BEREIT FÜR DEINE FRAGEN...</div>
+            <button id="speak-btn">🔊</button>
+            <div id="result-box">BEREIT...</div>
         </div>
         
-        <button id="btn-back-to-sim" class="btn-full btn-back" style="margin-top:20px;">Zurück zum Simulator</button>
+        <button onclick="stopHardwareCheck()" class="btn-full btn-back" style="margin-top:20px;">Zurück zum Simulator</button>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
+        // Navigation global verfügbar machen
+        window.nav = function(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        };
+
         let videoStream = null;
         let lastResponse = "";
 
-        // Navigation
-        function changeScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
-        // Kamera
-        async function startCam() {
+        // Kamera Funktionen
+        window.startHardwareCheck = async function() {
+            window.nav('tutor-screen');
             try {
                 videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 document.getElementById('webcam').srcObject = videoStream;
             } catch(e) { document.getElementById('result-box').innerText = "Kamerafehler: " + e.message; }
-        }
+        };
 
-        function stopCam() {
+        window.stopHardwareCheck = function() {
             if(videoStream) {
                 videoStream.getTracks().forEach(t => t.stop());
                 videoStream = null;
             }
-        }
-
-        window.onload = () => {
-            const keyField = document.getElementById('api-key-input');
-            if (localStorage.getItem('p_key')) keyField.value = localStorage.getItem('p_key');
-            keyField.oninput = () => localStorage.setItem('p_key', keyField.value);
-
-            document.getElementById('btn-goto-sim').onclick = () => changeScreen('simulator-screen');
-            document.getElementById('btn-back-to-setup').onclick = () => changeScreen('intro-screen');
-            document.getElementById('btn-goto-cam').onclick = () => { changeScreen('tutor-screen'); startCam(); };
-            document.getElementById('btn-back-to-sim').onclick = () => { stopCam(); changeScreen('simulator-screen'); };
-
-            document.getElementById('btn-send').onclick = () => runAI();
-            document.getElementById('speak-btn').onclick = toggleTTS;
-
-            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (Rec) {
-                const r = new Rec(); r.lang = 'de-DE';
-                document.getElementById('btn-mic').onclick = () => r.start();
-                r.onresult = (e) => { 
-                    document.getElementById('text-input').value = e.results[0][0].transcript; 
-                    runAI(); 
-                };
-            }
+            window.nav('simulator-screen');
         };
 
+        // Key Logik
+        const keyField = document.getElementById('api-key-input');
+        if (localStorage.getItem('p_key')) keyField.value = localStorage.getItem('p_key');
+        keyField.oninput = () => localStorage.setItem('p_key', keyField.value);
+
+        // TTS Logik
+        window.toggleTTS = function() {
+            const synth = window.speechSynthesis;
+            if (synth.speaking) {
+                synth.cancel();
+                document.getElementById('speak-btn').classList.remove('playing');
+                return;
+            }
+            let clean = lastResponse.replace(/!\[.*?\]\(.*?\)/g, "").replace(/```[\s\S]*?
+```/g, "Code steht in der Box.").replace(/[*#_`]/g, "").trim();
+            const ut = new SpeechSynthesisUtterance(clean);
+            const voices = synth.getVoices();
+            const gVoice = voices.find(v => v.name.includes("Google") && v.lang.startsWith("de"));
+            if (gVoice) ut.voice = gVoice;
+            ut.lang = 'de-DE';
+            ut.onstart = () => document.getElementById('speak-btn').classList.add('playing');
+            ut.onend = () => document.getElementById('speak-btn').classList.remove('playing');
+            synth.speak(ut);
+        };
+
+        // KI Abfrage
         async function runAI() {
             const k = localStorage.getItem('p_key');
             if (!k) return alert("Key fehlt!");
@@ -190,7 +192,7 @@
             try {
                 const genAI = new GoogleGenerativeAI(k);
                 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-                const prompt = `Du bist Phoenix Tutor. Hilf beim Arduino-Versuch "Blink". Antworte kurz auf Deutsch. 
+                const prompt = `Du bist Phoenix Tutor. Hilf beim Arduino-Blink Versuch. Antworte kurz auf Deutsch. 
                 Bilder: ![name](https://images.unsplash.com/featured/?[name]). Code: \`\`\`cpp \`\`\`. Frage: ${ti.value}`;
                 
                 const res = await model.generateContent([prompt, { inlineData: { data: img, mimeType: "image/jpeg" } }]);
@@ -202,33 +204,16 @@
             } catch (e) { rb.innerText = "Fehler: " + e.message; }
         }
 
-        // OPTIMIERTE TTS LOGIK
-        function toggleTTS() {
-            const synth = window.speechSynthesis;
-            if (synth.speaking) {
-                synth.cancel();
-                document.getElementById('speak-btn').classList.remove('playing');
-                return;
-            }
+        // Event Listener binden
+        document.getElementById('btn-send').onclick = runAI;
+        document.getElementById('speak-btn').onclick = window.toggleTTS;
+        document.getElementById('text-input').onkeypress = (e) => { if(e.key === 'Enter') runAI(); };
 
-            let clean = lastResponse
-                .replace(/!\[.*?\]\(.*?\)/g, "") // Bilder weg
-                .replace(/```[\s\S]*?
-```/g, " Ich habe dir den passenden Code in die Box geschrieben. ") // Code weg
-                .replace(/[*#_`]/g, "") // Markdown weg
-                .trim();
-
-            const ut = new SpeechSynthesisUtterance(clean);
-            
-            // Suche nach Google Stimmen (klingen menschlicher)
-            const voices = synth.getVoices();
-            const googleVoice = voices.find(v => v.name.includes("Google") && v.lang.startsWith("de"));
-            if (googleVoice) ut.voice = googleVoice;
-
-            ut.lang = 'de-DE';
-            ut.onstart = () => document.getElementById('speak-btn').classList.add('playing');
-            ut.onend = () => document.getElementById('speak-btn').classList.remove('playing');
-            synth.speak(ut);
+        const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (Rec) {
+            const r = new Rec(); r.lang = 'de-DE';
+            document.getElementById('btn-mic').onclick = () => r.start();
+            r.onresult = (e) => { document.getElementById('text-input').value = e.results[0][0].transcript; runAI(); };
         }
     </script>
 </body>
